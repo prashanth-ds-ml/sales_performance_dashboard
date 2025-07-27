@@ -82,5 +82,3 @@ This section outlines all the key business questions and analytical tasks we aim
 ---
 
 👉 Each SQL query will be documented in the `/queries` folder and linked to the dashboard section it supports.
-
-For collaboration, each task will be tracked with ownership status in our task tracker.
