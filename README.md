@@ -4,6 +4,35 @@ Here we work on superstore sales data with SQL and make an insightful dashboard 
 
 Dataset_link : https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
 
+## 📊 Data Preparation & Cleaning (`data.ipynb`)
+
+This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore dataset for SQL analysis and dashboarding.  
+**Key steps performed:**
+
+1. **Dataset Download & Extraction**
+   - Downloaded the Superstore dataset from Kaggle using `kagglehub`.
+   - Copied the dataset into the `/data` directory.
+
+2. **Data Loading**
+   - Loaded the raw CSV (`Sample - Superstore.csv`) into a pandas DataFrame.
+   - Handled encoding issues using `latin1`.
+
+3. **Data Cleaning**
+   - Stripped whitespace from column names, replaced spaces/dashes with underscores, and converted to lowercase.
+   - Removed duplicate rows.
+   - Filled missing (NaN) values with empty strings.
+   - Stripped leading/trailing whitespace from all string columns.
+   - Converted numeric columns to appropriate types.
+   - Converted date columns (`order_date`, `ship_date`) to `YYYY-MM-DD` format for SQL compatibility.
+
+4. **Export Cleaned Data**
+   - Saved the cleaned DataFrame as `superstore_clean.csv` in the `/data` directory.
+
+5. **Database Loading**
+   - Connected to a local MySQL database using `mysql.connector`.
+   - Created a `sales` table with appropriate column types.
+   - Inserted data in batches for efficiency and reliability.
+
 ## 🔍 SQL Analysis Plan
 
 This section outlines all the key business questions and analytical tasks we aim to answer using SQL on the Superstore Sales dataset. Each task is categorized for better clarity and mapped to SQL techniques used.
