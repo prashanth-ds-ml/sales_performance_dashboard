@@ -1,3 +1,8 @@
+
+-- ========== --
+-- 8 Aug 2025 --
+-- ========== --
+
 -- `use` command helps us in using the required database
 use super_store_sales;
 
