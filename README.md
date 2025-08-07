@@ -33,6 +33,30 @@ This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore da
    - Created a `sales` table with appropriate column types.
    - Inserted data in batches for efficiency and reliability.
 
+## 🧮 SQL EDA & Profiling (`queries/sql_eda.sql`)
+
+The [`queries/sql_eda.sql`](queries/sql_eda.sql) file contains essential SQL queries for initial data exploration, validation, and profiling.  
+**Key EDA steps and queries:**
+
+- **Database & Table Inspection**
+  - Select the working database and describe the `Sales` table schema.
+  - View the first 10 records and count total rows.
+
+- **Time Span & Completeness**
+  - Find the earliest and latest order dates to determine the data's time range.
+  - Count total records for sanity check.
+
+- **Null & Data Quality Checks**
+  - Count NULLs in every column to identify missing data.
+  - Validate column names and data types using `INFORMATION_SCHEMA`.
+
+- **Categorical & Numerical Profiling**
+  - List all categorical columns (e.g., `Segment`, `Region`, `Product Name`).
+  - Count distinct values in each categorical column.
+  - List all numerical columns for further statistical analysis.
+
+These queries help ensure the data is loaded correctly, is clean, and is ready for deeper analysis and dashboarding.
+
 ## 🔍 SQL Analysis Plan
 
 This section outlines all the key business questions and analytical tasks we aim to answer using SQL on the Superstore Sales dataset. Each task is categorized for better clarity and mapped to SQL techniques used.
