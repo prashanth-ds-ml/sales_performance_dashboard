@@ -4,6 +4,30 @@ Here we work on superstore sales data with SQL and make an insightful dashboard 
 
 Dataset_link : https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
 
+
+## 📁 Project Structure
+
+```
+sales_performance_dashboard/
+│
+├── data/
+│   ├── Sample - Superstore.csv         # Raw dataset
+│   ├── superstore_clean.csv            # Cleaned dataset ready for SQL
+│   └── superstore.db                   # (Optional) SQLite database
+│
+├── notebooks/
+│   └── data.ipynb                      # Data cleaning and preparation notebook
+│
+├── queries/
+│   └── sql_eda.sql                     # SQL EDA and profiling queries
+│
+├── app/
+│   └── dashboard.py                    # Streamlit dashboard (to be developed)
+│
+└── README.md
+```
+
+
 ## 📊 Data Preparation & Cleaning (`data.ipynb`)
 
 This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore dataset for SQL analysis and dashboarding.  
@@ -35,27 +59,33 @@ This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore da
 
 ## 🧮 SQL EDA & Profiling (`queries/sql_eda.sql`)
 
-The [`queries/sql_eda.sql`](queries/sql_eda.sql) file contains essential SQL queries for initial data exploration, validation, and profiling.  
-**Key EDA steps and queries:**
-
-- **Database & Table Inspection**
-  - Select the working database and describe the `Sales` table schema.
-  - View the first 10 records and count total rows.
-
-- **Time Span & Completeness**
-  - Find the earliest and latest order dates to determine the data's time range.
-  - Count total records for sanity check.
-
-- **Null & Data Quality Checks**
-  - Count NULLs in every column to identify missing data.
-  - Validate column names and data types using `INFORMATION_SCHEMA`.
-
-- **Categorical & Numerical Profiling**
-  - List all categorical columns (e.g., `Segment`, `Region`, `Product Name`).
-  - Count distinct values in each categorical column.
-  - List all numerical columns for further statistical analysis.
-
+The [`queries/sql_eda.sql`](queries/sql_eda.sql) file contains a comprehensive set of SQL queries for initial data exploration, validation, and profiling.  
 These queries help ensure the data is loaded correctly, is clean, and is ready for deeper analysis and dashboarding.
+
+**Key EDA steps and queries include:**
+
+| Area                        | Example Queries & Insights                                                                                   |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------|
+| **Database & Table Inspection** | - Use the correct database<br>- Describe the `Sales` table schema<br>- View first 10 records<br>- Count total rows |
+| **Time Span & Completeness**    | - Find earliest and latest order dates<br>- Count total records for sanity check                           |
+| **Null & Data Quality Checks**  | - Count NULLs in every column<br>- Validate column names and data types using `INFORMATION_SCHEMA`         |
+| **Categorical Profiling**       | - List all categorical columns (e.g., `Segment`, `Region`, `Product Name`)<br>- Count distinct values in each categorical column |
+| **Numerical Profiling**         | - List all numerical columns<br>- Calculate min, max, avg, stddev for sales, quantity, discount, profit    |
+| **Segment & Category Analysis** | - Orders, sales, % contribution by `Segment` and `Category`                                               |
+| **Region & State Analysis**     | - Orders, sales, profit, margin, avg discount by `Region` and `State`<br>- Top 5 states by revenue<br>- Loss-making states |
+| **Shipping Mode Analysis**      | - Orders, sales, profit, margin, avg discount by `Ship Mode`                                              |
+
+**Sample queries covered:**
+- Table schema and row count
+- Date range of sales data
+- Null counts per column
+- Distinct value counts for categorical columns
+- Numeric column summaries (min, max, avg, stddev)
+- Segment, category, region, state, and ship mode performance breakdowns
+- Top and bottom performers (e.g., top 5 states by revenue, loss-making states)
+
+> These queries are designed to be run sequentially for a full data health check and to generate summary tables for your dashboard.
+
 
 ## 🔍 SQL Analysis Plan
 
