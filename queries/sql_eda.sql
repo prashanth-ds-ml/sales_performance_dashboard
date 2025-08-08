@@ -238,3 +238,133 @@ from information_schema.columns
 where table_name = 'Sales'
 	and table_schema = 'super_store_sales'
     and data_type in ('int','decimal');
+
+
+-- ========== --
+-- 9 Aug 2025 --
+-- ========== --
+
+-- =====================================================================================================
+-- 📊 Query: Numeric Column Summaries – Min, Max, Avg, StdDev
+-- -----------------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Calculate basic statistical summaries (min, max, average, standard deviation) for each 
+--     numeric column in the Sales dataset to understand the range and distribution of values.
+--
+-- 🧠 Why this matters:
+--     - Useful for detecting outliers (e.g., high discounts or huge profits/losses)
+--     - Helps in understanding variability and central tendency of key metrics
+--     - Provides sanity check on data integrity (e.g., no negative sales unless refunds are tracked)
+--
+-- 🛠️ How the Query Works:
+--     - `MIN()` and `MAX()` show the range of each metric
+--     - `AVG()` calculates the mean value
+--     - `STDDEV()` returns standard deviation (amount of variation)
+--
+-- 📊 Example Use Cases:
+--     - Compare regions or categories against overall averages
+--     - Identify unusual pricing, discounting, or profitability patterns
+--     - Feed summary stats into reports or dashboards
+-- =====================================================================================================
+
+-- sales summary
+
+select 
+	min(Sales) as min_sales,
+    max(Sales) as max_sales,
+    avg(Sales) as avg_sales,
+    stddev(Sales) as stddev_sales
+from Sales;
+
+-- Quantity summary
+
+select 
+	min(Quantity) as min_sales,
+    max(Quantity) as max_sales,
+    avg(Quantity) as avg_sales,
+    stddev(Quantity) as stddev_sales
+from Sales;
+
+-- Discount summary
+
+select 
+	min(Discount) as min_sales,
+    max(Discount) as max_sales,
+    avg(Discount) as avg_sales,
+    stddev(Discount) as stddev_sales
+from Sales;
+
+-- Profit Summary
+
+select 
+	min(Profit) as min_sales,
+    max(Profit) as max_sales,
+    avg(Profit) as avg_sales,
+    stddev(Profit) as stddev_sales
+from Sales;
+
+-- ==========================================================================================
+-- 🧩 Query: Segment Distribution (Counts, Sales, and % Contribution)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Understand how orders and revenue are distributed across customer segments.
+--
+-- 🧠 Why this matters:
+--     - Validates expected mix (e.g., Consumer vs Corporate)
+--     - Helps prioritize segment-focused strategies in dashboards
+--
+-- 🛠️ How it works:
+--     - GROUP BY Segment to aggregate rows
+--     - COUNT(*) -> number of order lines in each segment
+--     - SUM(Sales) -> total revenue per segment
+--     - Percent of total is computed by dividing by overall totals via scalar subqueries
+--       (keeps logic simple and MySQL-friendly)
+-- ==========================================================================================
+
+
+select 
+	Segment,
+    count(*) as orders,
+    round(sum(Sales),2) as sales,
+    -- % of total orders
+    round(100 * count(*)/(select count(*) from Sales),2) as pct_orders,
+    -- % of total sales
+	round(100 * sum(Sales)/(select sum(Sales) from Sales),2) as pct_sales
+from sales
+group by Segment
+order by sales desc;
+
+-- ==========================================================================================
+-- 🧩 Query: Category Distribution (Orders, Sales, Profit, % Share, Margin, Avg Discount)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Understand performance by product Category: volume, revenue, profitability, and mix.
+--
+-- 🧠 Why this matters:
+--     - Validates which categories drive revenue vs. profit
+--     - Highlights categories with high discounts but weak margins
+--     - Feeds category filter cards and KPI tiles in dashboards
+--
+-- 🛠️ How it works:
+--     - GROUP BY Category to aggregate line items per category
+--     - COUNT(*)            → number of order lines (volume proxy)
+--     - SUM(Sales)/Profit   → totals by category
+--     - % of total          → scalar subqueries divide by overall table totals
+--     - Margin %            → (profit / sales) * 100 (NULLIF avoids divide-by-zero)
+--     - AVG(Discount)       → average discount behavior by category
+-- ==========================================================================================
+
+select 
+	category,
+    count(*) as orders,
+    round(sum(Sales),2) as sales,
+    round(sum(Profit),2) as profit,
+    round(100 * sum(Sales) / (select sum(Sales) from Sales),2) as pct_sales,
+    round(100 * sum(Profit) / (select sum(Profit) from Sales), 2) as pct_profit,
+    round(100 * sum(Profit) / nullif(sum(Sales),0),2) as margin_pct,
+    round(avg(Discount),2) as avg_discount
+from Sales
+Group by Category
+order by sales desc;
+
+    
