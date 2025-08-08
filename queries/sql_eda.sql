@@ -367,4 +367,146 @@ from Sales
 Group by Category
 order by sales desc;
 
+-- ==========================================================================================
+-- 🧭 Query: Region Performance (Orders, Sales, Profit, % Shares, Margin %, Avg Discount)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Evaluate how each Region contributes to volume, revenue, and profitability.
+--
+-- 🧠 Why this matters:
+--     - Identifies high/low performing regions for targeting
+--     - Useful for regional bar charts and geo maps
+--     - Surfaces margin pressure via discounting behavior
+--
+-- 🛠️ How it works:
+--     - GROUP BY Region aggregates line items to the regional level
+--     - COUNT(*)                 → order-line volume proxy
+--     - SUM(Sales), SUM(Profit)  → totals by region
+--     - % shares                 → divide regional totals by overall totals (scalar subqueries)
+--     - Margin %                 → (profit / sales) * 100 (NULLIF prevents divide-by-zero)
+--     - AVG(Discount)            → average discount in that region
+-- ==========================================================================================
+
+select Region,
+	count(*) as orders,
+    round(sum(Sales),2) as sales,
+    round(sum(Profit),2) as profit,
+    round(100 * sum(Sales) / (select sum(Sales) from Sales), 2) as pct_sales,
+    round(100 * sum(Profit) / (select sum(Profit) from Sales), 2) as pct_profit,
+    round(100 * sum(profit) / nullif(sum(Sales), 0),2) as margin_pct,
+    round(avg(Discount), 2) as avg_discount
+from Sales
+group by Region order by sales desc;
+
+-- ==========================================================================================
+-- 🚚 Query: Ship Mode Performance (Orders, Sales, Profit, % Shares, Margin %, Avg Discount)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Understand how different shipping methods impact sales, profit, and discounting.
+--
+-- 🧠 Why this matters:
+--     - Highlights costlier or less profitable shipping methods
+--     - Informs decisions on promotional free-shipping offers
+--     - Useful for operational efficiency dashboards
+--
+-- 🛠️ How it works:
+--     - GROUP BY Ship Mode aggregates at the shipping method level
+--     - COUNT(*)                 → number of order lines per ship mode
+--     - SUM(Sales), SUM(Profit)  → revenue & profit per mode
+--     - % shares                 → compares each ship mode to total sales/profit
+--     - Margin %                 → profit-to-sales ratio per mode
+--     - AVG(Discount)            → average discount offered per mode
+-- ==========================================================================================
+
+SELECT
+  `Ship Mode`,
+  COUNT(*)                                                        AS orders,
+  ROUND(SUM(Sales), 2)                                            AS sales,
+  ROUND(SUM(Profit), 2)                                           AS profit,
+  ROUND(100 * SUM(Sales)  / (SELECT SUM(Sales)  FROM Sales), 2)   AS pct_sales,
+  ROUND(100 * SUM(Profit) / (SELECT SUM(Profit) FROM Sales), 2)   AS pct_profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)             AS margin_pct,
+  ROUND(AVG(Discount), 2)                                         AS avg_discount
+FROM Sales
+GROUP BY `Ship Mode`
+ORDER BY sales DESC;
+
+-- ==========================================================================================
+-- 🗺️ Query: State-Level Sales & Profit Analysis
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify top and bottom-performing states in terms of sales, profit, and margin.
+--
+-- 🧠 Why this matters:
+--     - Highlights high-revenue states for targeted marketing
+--     - Exposes loss-making regions that may need pricing or cost review
+--     - Useful for building choropleth maps in dashboards
+--
+-- 🛠️ How it works:
+--     - GROUP BY State aggregates data for each state
+--     - COUNT(*)                 → number of order lines
+--     - SUM(Sales), SUM(Profit)  → total revenue & profit per state
+--     - Margin %                 → profitability per state
+--     - AVG(Discount)            → average discount per state
+-- ==========================================================================================
+
+SELECT
+  State,
+  COUNT(*)                                                        AS orders,
+  ROUND(SUM(Sales), 2)                                            AS sales,
+  ROUND(SUM(Profit), 2)                                           AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)             AS margin_pct,
+  ROUND(AVG(Discount), 2)                                         AS avg_discount
+FROM Sales
+GROUP BY State
+ORDER BY sales DESC;
+
+-- ==========================================================================================
+-- 🏔️ Query: Top 5 States by Revenue
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify the highest revenue-generating states to prioritize sales/marketing efforts.
+--
+-- 🧠 Why this matters:
+--     - Quick shortlist for geo targeting and account focus
+--     - Useful for leaderboard cards or bar charts in dashboards
+--
+-- 🛠️ How it works:
+--     - GROUP BY State to aggregate order lines per state
+--     - SUM(Sales), SUM(Profit) to compute totals
+--     - Margin % = Profit / Sales (NULLIF avoids divide-by-zero)
+-- ==========================================================================================
+
+select 
+	State,
+	count(*) as orders,
+    round(sum(Sales), 2) as sales,
+    round(sum(Profit), 2) as profit,
+    round(100 * sum(Profit) / nullif(sum(Sales), 0),2) as margin_pct
+from Sales
+group by State order by sales desc limit 5;
+
+-- ==========================================================================================
+-- 🧯 Query: Loss-Making States
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Surface states where total profit is negative (unprofitable overall).
+--
+-- 🧠 Why this matters:
+--     - Flags pricing/discount/shipping issues by geography
+--     - Guides corrective actions (pricing rules, logistics, promotions)
+--
+-- 🛠️ How it works:
+--     - GROUP BY State and SUM(Profit)
+--     - HAVING filters to only negative totals
+-- ==========================================================================================
+
+select State,
+	round(sum(Profit), 2) as profit,
+    round(sum(Sales), 2) as sales,
+    round(100 * sum(Profit) / nullif(sum(Sales), 0), 2) as margin_pct
+from Sales
+group by State 
+having sum(Profit) < 0
+order by profit ASC;
     
