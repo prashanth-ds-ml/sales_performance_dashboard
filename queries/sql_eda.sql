@@ -509,4 +509,250 @@ from Sales
 group by State 
 having sum(Profit) < 0
 order by profit ASC;
-    
+
+-- =========== --
+-- 11 Aug 2025 --
+-- =========== --
+
+-- ==========================================================================================
+-- ⛵ Query: Average Shipping Time by Region (in days)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Measure operational latency by region using order-to-ship lead time.
+--
+-- 🧠 Why this matters:
+--     - Highlights fulfillment bottlenecks by region
+--     - Pairs well with margin to see if faster shipping hurts/helps profit
+--
+-- 🛠️ How it works:
+--     - DATEDIFF(Ship Date, Order Date) computes days between order and ship
+--     - AVG over that difference per region
+-- ==========================================================================================
+
+select Region,
+	round(avg(datediff(`Ship Date`, `Order Date`)),2) as avg_ship_days,
+    count(*) as orders,
+    round(sum(Sales),2) as sales,
+    round(sum(Profit), 2) as profit,
+    round(100 * sum(Profit) / nullif(sum(Sales), 0), 2) as margin_pct
+from Sales
+group by Region order by avg_ship_days;
+
+-- ==========================================================================================
+-- ⏱️ B1 — Monthly Sales & Profit
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Summarize revenue and profit by calendar month to spot trends/seasonality.
+--
+-- 🛠️ How it works:
+--     - DATE_FORMAT groups orders by YYYY-MM
+--     - SUM over Sales/Profit for monthly totals
+-- ==========================================================================================
+
+SELECT 
+  DATE_FORMAT(`Order Date`, '%Y-%m') AS month,
+  ROUND(SUM(Sales), 2)  AS sales,
+  ROUND(SUM(Profit), 2) AS profit
+FROM Sales
+GROUP BY month
+ORDER BY month;
+
+-- ==========================================================================================
+-- 📈 B2 — Month-over-Month (MoM) Growth in Revenue
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Measure percentage growth vs the previous month (momentum).
+--
+-- 🛠️ How it works:
+--     - First CTE aggregates monthly sales
+--     - LAG() fetches prior month’s value
+--     - NULLIF avoids divide-by-zero for the first month or gaps
+-- ==========================================================================================
+
+WITH m AS (
+  SELECT DATE_FORMAT(`Order Date`, '%Y-%m') AS month,
+         SUM(Sales) AS sales
+  FROM Sales
+  GROUP BY month
+)
+SELECT 
+  month,
+  ROUND(sales, 2) AS sales,
+  ROUND(
+    (sales - LAG(sales) OVER (ORDER BY month))
+    / NULLIF(LAG(sales) OVER (ORDER BY month), 0) * 100, 2
+  ) AS mom_pct
+FROM m
+ORDER BY month; 
+
+-- ==========================================================================================
+-- 💸 B3 — Monthly Average Discount
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Track discounting behavior over time (useful for margin analysis).
+--
+-- 🛠️ How it works:
+--     - DATE_FORMAT groups by month
+--     - AVG computes typical discount level per month
+-- ==========================================================================================
+
+SELECT 
+  DATE_FORMAT(`Order Date`, '%Y-%m') AS month,
+  ROUND(AVG(Discount), 3) AS avg_discount
+FROM Sales
+GROUP BY month
+ORDER BY month;
+
+-- ==========================================================================================
+-- 🏆 B4 — Month with Highest Total Profit
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify peak profit month for planning and benchmarks.
+--
+-- 🛠️ How it works:
+--     - Aggregate monthly profit, sort descending, pick top 1
+-- ==========================================================================================
+
+SELECT 
+  DATE_FORMAT(`Order Date`, '%Y-%m') AS month,
+  ROUND(SUM(Profit), 2) AS profit
+FROM Sales
+GROUP BY month
+ORDER BY profit DESC
+LIMIT 1;
+
+-- ==========================================================================================
+-- 🏷️ C1 — Top 10 Products by Revenue
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify the biggest revenue drivers at the product level.
+--
+-- 🧠 Why this matters:
+--     - Prioritize inventory, pricing, and promotions for high-impact items
+--     - Great for “Top Products” table or bar chart in the dashboard
+--
+-- 🛠️ How it works:
+--     - GROUP BY Product Name to aggregate line items
+--     - SUM(Sales) and SUM(Profit) to get totals
+--     - Margin % = Profit / Sales (NULLIF prevents divide-by-zero)
+-- ==========================================================================================
+
+SELECT
+  `Product Name`,
+  COUNT(*)                                                     AS order_lines,
+  ROUND(SUM(Sales), 2)                                         AS sales,
+  ROUND(SUM(Profit), 2)                                        AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)          AS margin_pct,
+  ROUND(AVG(Discount), 3)                                      AS avg_discount
+FROM Sales
+GROUP BY `Product Name`
+ORDER BY sales DESC
+LIMIT 10;
+
+-- ==========================================================================================
+-- 📦 C2 — Top 10 Products by Quantity
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Find the most frequently purchased products by units sold.
+--
+-- 🧠 Why this matters:
+--     - High-volume items may need stock priority and logistics focus
+--     - Complements revenue ranking (volume ≠ revenue)
+--
+-- 🛠️ How it works:
+--     - GROUP BY Product Name
+--     - SUM(Quantity) for total units; add sales/profit context
+-- ==========================================================================================
+
+SELECT
+  `Product Name`,
+  SUM(Quantity)                                               AS qty,
+  ROUND(SUM(Sales), 2)                                        AS sales,
+  ROUND(SUM(Profit), 2)                                       AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)         AS margin_pct,
+  ROUND(AVG(Discount), 3)                                     AS avg_discount
+FROM Sales
+GROUP BY `Product Name`
+ORDER BY qty DESC
+LIMIT 10;
+
+-- ==========================================================================================
+-- ⚠️ C3 — High Sales but Low/Negative Profit Products
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Surface products that generate strong revenue but poor profitability.
+--
+-- 🧠 Why this matters:
+--     - Candidates for pricing review, discount controls, or cost optimization
+--
+-- 🛠️ How it works:
+--     - GROUP BY Product Name
+--     - Filter in HAVING: high sales threshold + profit <= 0
+--     - Adjust threshold to fit your dataset size (e.g., 5000, 10000, etc.)
+-- ==========================================================================================
+
+SELECT
+  `Product Name`,
+  ROUND(SUM(Sales), 2)   AS sales,
+  ROUND(SUM(Profit), 2)  AS profit,
+  ROUND(AVG(Discount),3) AS avg_discount
+FROM Sales
+GROUP BY `Product Name`
+HAVING SUM(Sales) > 10000
+   AND SUM(Profit) <= 0
+ORDER BY sales DESC;
+
+-- ==========================================================================================
+-- 🏷️ C4 — Average Discount per Category and Sub-Category
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     See which (sub)categories receive heavier discounting.
+--
+-- 🧠 Why this matters:
+--     - Discount pressure often correlates with weaker margins
+--     - Useful for merchandising and promo strategy
+--
+-- 🛠️ How it works:
+--     - GROUP BY Category / Sub-Category
+--     - AVG(Discount) for typical discount level
+-- ==========================================================================================
+
+-- By Category
+SELECT
+  Category,
+  ROUND(AVG(Discount), 3) AS avg_discount,
+  ROUND(SUM(Sales), 2)    AS sales,
+  ROUND(SUM(Profit), 2)   AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2) AS margin_pct
+FROM Sales
+GROUP BY Category
+ORDER BY avg_discount DESC;
+
+-- By Sub-Category
+SELECT
+  `Sub-Category`,
+  ROUND(AVG(Discount), 3) AS avg_discount,
+  ROUND(SUM(Sales), 2)    AS sales,
+  ROUND(SUM(Profit), 2)   AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2) AS margin_pct
+FROM Sales
+GROUP BY `Sub-Category`
+ORDER BY avg_discount DESC; 
+
+-- ==========================================================================================
+-- 🧪 C5 (Optional) — Bottom 10 Products by Profit (Loss Leaders)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify products dragging down profitability overall.
+-- ==========================================================================================
+
+SELECT
+  `Product Name`,
+  ROUND(SUM(Sales), 2)  AS sales,
+  ROUND(SUM(Profit), 2) AS profit,
+  ROUND(AVG(Discount),3) AS avg_discount
+FROM Sales
+GROUP BY `Product Name`
+ORDER BY profit ASC
+LIMIT 10;
+
