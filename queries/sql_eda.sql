@@ -754,5 +754,121 @@ SELECT
 FROM Sales
 GROUP BY `Product Name`
 ORDER BY profit ASC
-LIMIT 10;
+LIMIT 10; 
+
+-- ==========================================================================================
+-- 👥 D1 — Segment Revenue, Profit, Margin, % Shares
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Compare segments on volume, revenue, profitability, and their mix contribution.
+--
+-- 🛠️ How it works:
+--     - GROUP BY Segment to aggregate line items
+--     - SUM for sales/profit; margin% = profit/sales
+--     - % shares via scalar subqueries over whole table
+-- ==========================================================================================
+
+SELECT
+  Segment,
+  COUNT(*)                                                        AS orders,
+  ROUND(SUM(Sales), 2)                                            AS sales,
+  ROUND(SUM(Profit), 2)                                           AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)             AS margin_pct,
+  ROUND(100 * SUM(Sales)  / (SELECT SUM(Sales)  FROM Sales), 2)   AS pct_sales,
+  ROUND(100 * SUM(Profit) / (SELECT SUM(Profit) FROM Sales), 2)   AS pct_profit,
+  ROUND(AVG(Discount), 3)                                         AS avg_discount
+FROM Sales
+GROUP BY Segment
+ORDER BY sales DESC;
+
+-- ==========================================================================================
+-- 🏆 D2 — Top 10 Customers by Lifetime Spend
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Identify the highest-spending customers for targeting and retention.
+--
+-- 🛠️ How it works:
+--     - GROUP BY Customer ID/Name
+--     - SUM Sales/Profit; margin% for context
+-- ==========================================================================================
+
+SELECT
+  `Customer ID`,
+  `Customer Name`,
+  ROUND(SUM(Sales), 2)                                            AS lifetime_sales,
+  ROUND(SUM(Profit), 2)                                           AS lifetime_profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2)             AS margin_pct,
+  COUNT(*)                                                        AS order_lines
+FROM Sales
+GROUP BY `Customer ID`, `Customer Name`
+ORDER BY lifetime_sales DESC
+LIMIT 10; 
+
+-- ==========================================================================================
+-- 💸 D3 — Average Discount by Segment
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     See which segments receive the heaviest discounts (margin pressure).
+--
+-- 🛠️ How it works:
+--     - GROUP BY Segment; AVG(Discount) for typical level
+-- ==========================================================================================
+
+SELECT
+  Segment,
+  ROUND(AVG(Discount), 3) AS avg_discount,
+  ROUND(SUM(Sales), 2)    AS sales,
+  ROUND(SUM(Profit), 2)   AS profit,
+  ROUND(100 * SUM(Profit) / NULLIF(SUM(Sales), 0), 2) AS margin_pct
+FROM Sales
+GROUP BY Segment
+ORDER BY avg_discount DESC; 
+
+-- ==========================================================================================
+-- 🚩 D4 — Customers with Negative Total Profit
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Flag customers who are net unprofitable overall.
+--
+-- 🛠️ How it works:
+--     - GROUP BY Customer; HAVING filters negative-profit totals
+-- ==========================================================================================
+
+SELECT
+  `Customer ID`,
+  `Customer Name`,
+  ROUND(SUM(Sales), 2)  AS sales,
+  ROUND(SUM(Profit), 2) AS profit,
+  ROUND(AVG(Discount),3) AS avg_discount,
+  COUNT(*)              AS order_lines
+FROM Sales
+GROUP BY `Customer ID`, `Customer Name`
+HAVING SUM(Profit) < 0
+ORDER BY profit ASC;
+
+-- ==========================================================================================
+-- 🧭 D5 (Optional) — Customer Lifetime Timeline (First/Last Order, Tenure)
+-- ------------------------------------------------------------------------------------------
+-- 🎯 Objective:
+--     Add lifecycle context: when they first/last ordered and tenure days.
+--
+-- 🛠️ How it works:
+--     - MIN/MAX over Order Date per customer; DATEDIFF for tenure
+-- ==========================================================================================
+
+SELECT
+  `Customer ID`,
+  `Customer Name`,
+  MIN(`Order Date`)                           AS first_order_date,
+  MAX(`Order Date`)                           AS last_order_date,
+  DATEDIFF(MAX(`Order Date`), MIN(`Order Date`)) AS tenure_days,
+  ROUND(SUM(Sales), 2)                        AS lifetime_sales,
+  ROUND(SUM(Profit), 2)                       AS lifetime_profit
+FROM Sales
+GROUP BY `Customer ID`, `Customer Name`
+ORDER BY lifetime_sales DESC;
+
+
+
+
 
