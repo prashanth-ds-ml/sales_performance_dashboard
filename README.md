@@ -34,7 +34,7 @@ This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore da
 **Key steps performed:**
 
 1. **Dataset Download & Extraction**
-   - Downloaded the Superstore dataset from Kaggle using `kagglehub`.
+   - Downloaded the Superstore dataset from kaggle using `kagglehub`.
    - Copied the dataset into the `/data` directory.
 
 2. **Data Loading**
