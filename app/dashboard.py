@@ -1,5 +1,5 @@
 # app/dashboard.py
-# Streamlit + SQLite Superstore Dashboard (Saved-Queries Driven)
+# Streamlit + SQLite Superstore Dashboard (Saved-Queries Driven, WITH-safe wrapper)
 
 import os, sqlite3
 from datetime import date
@@ -11,7 +11,7 @@ import altair as alt
 import plotly.express as px
 import matplotlib.pyplot as plt
 
-import sql_queries as Q   # <-- lives in the same folder
+import sql_queries as Q   # <- lives beside this file
 
 st.set_page_config(page_title="Superstore — SQL Dashboard", layout="wide")
 HERE     = os.path.dirname(__file__)
@@ -19,15 +19,13 @@ DATA_DIR = os.path.abspath(os.path.join(HERE, "..", "data"))
 DB_PATH  = os.path.join(DATA_DIR, "superstore.db")
 CSV_PATH = os.path.join(DATA_DIR, "superstore_clean.csv")
 
-# ───────────────────────────────── build DB if needed ─────────────────────────────────
+# ─────────────────────────── Build DB if needed ───────────────────────────
 def _ensure_db():
     if os.path.exists(DB_PATH) or not os.path.exists(CSV_PATH):
         return
     os.makedirs(DATA_DIR, exist_ok=True)
     df = pd.read_csv(CSV_PATH)
-    df.columns = (
-        df.columns.str.strip().str.lower().str.replace(r"[^\w]+", "_", regex=True)
-    )
+    df.columns = df.columns.str.strip().str.lower().str.replace(r"[^\w]+", "_", regex=True)
     for c in ("order_date", "ship_date"):
         if c in df.columns:
             df[c] = pd.to_datetime(df[c], errors="coerce")
@@ -65,7 +63,7 @@ def base_df() -> pd.DataFrame:
         df["ship_date"] = pd.to_datetime(df["ship_date"], errors="coerce")
     return df
 
-# ───────────────────────────────── filter CTE injector ────────────────────────────────
+# ───────────────────── Filter builder + WITH-safe injector ─────────────────────
 def _in_clause(col: str, values: List[str], key: str):
     if not values:
         return None, {}
@@ -76,14 +74,35 @@ def _in_clause(col: str, values: List[str], key: str):
 
 def make_filtered_query(saved_sql: str, where_sql: str) -> str:
     """
-    If the saved query uses 'FROM sales', run it against a filtered CTE.
+    Inject a filtered CTE that works for:
+      • plain SELECT ... FROM sales ...
+      • WITH ... queries that reference sales inside (we chain our CTE first)
+    Only injects when the query actually references 'FROM sales'.
     """
-    if " from sales" in saved_sql.lower():
-        s = saved_sql.replace("FROM sales", "FROM filtered_sales").replace("from sales", "from filtered_sales")
-        return f"WITH filtered_sales AS (SELECT * FROM sales {where_sql})\n{s}"
-    return saved_sql
+    if not saved_sql:
+        return saved_sql
+    sql = saved_sql.strip()
+    # Only if it references the base table
+    if " from sales" not in sql.lower():
+        return sql
 
-# ───────────────────────────────── health & filters ──────────────────────────────────
+    # Replace all 'FROM sales' with 'FROM filtered_sales' (simple case-insensitive handling)
+    replaced = (
+        sql.replace("FROM sales", "FROM filtered_sales")
+           .replace("from sales", "from filtered_sales")
+    )
+
+    cte = f"filtered_sales AS (SELECT * FROM sales {where_sql})"
+
+    # If the query already starts with WITH, chain ours
+    if replaced.lower().startswith("with "):
+        after_with = replaced[4:].lstrip()  # drop 'WITH' + spaces
+        return f"WITH {cte},\n{after_with}"
+
+    # Otherwise, prepend our CTE alone
+    return f"WITH {cte}\n{replaced}"
+
+# ───────────────────────────── Health & filters ─────────────────────────────
 if not os.path.exists(DB_PATH):
     st.error("No DB found and no CSV to build it. Add `data/superstore.db` or `data/superstore_clean.csv`.")
     st.stop()
@@ -110,7 +129,8 @@ def _defaults(_df: pd.DataFrame):
 d_min, d_max, seg_all, reg_all, cat_all = _defaults(df)
 
 if st.sidebar.button("Reset filters", type="primary"):
-    for k in ("date_range","seg_sel","reg_sel","cat_sel"): st.session_state.pop(k, None)
+    for k in ("date_range","seg_sel","reg_sel","cat_sel"):
+        st.session_state.pop(k, None)
 
 date_range = st.sidebar.date_input("Order date range", value=st.session_state.get("date_range", [d_min, d_max]))
 seg_sel = st.sidebar.multiselect("Segment", seg_all, default=st.session_state.get("seg_sel", seg_all))
@@ -137,7 +157,7 @@ if cat_sel:
 
 WHERE = "WHERE " + " AND ".join([w for w in where_parts if w]) if where_parts else ""
 
-# ───────────────────────────────── KPIs ───────────────────────────────────────────────
+# ───────────────────────────── KPIs ─────────────────────────────
 st.title("🛒 Superstore — SQL Dashboard (Saved Queries)")
 
 kpi_sql = """
@@ -156,16 +176,16 @@ c3.metric("Total Orders", f"{int(kpis['total_orders'][0] or 0):,}" if not kpis.e
 c4.metric("Avg. Discount", f"{(kpis['avg_discount'][0] or 0):.2%}" if not kpis.empty else "0.00%")
 st.markdown("---")
 
-# ───────────────────────────────── TABS (Visuals) ────────────────────────────────────
+# ───────────────────────────── Tabs (Visuals) ─────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Time Series", "Segments & Categories", "Geography", "Products", "Shipping & Discounts"
 ])
 
 with tab1:
+    # Monthly Sales & Profit
     if hasattr(Q, "MONTHLY_SALES_PROFIT"):
         ts = run_sql(make_filtered_query(Q.MONTHLY_SALES_PROFIT, WHERE), params)
         if not ts.empty:
-            # month is 'YYYY-MM'; make a date for plotting
             if "month" in ts.columns:
                 ts["ym"] = pd.to_datetime(ts["month"] + "-01", errors="coerce")
                 xcol = "ym"
@@ -176,21 +196,28 @@ with tab1:
             st.subheader("Monthly Sales")
             st.altair_chart(
                 alt.Chart(ts).mark_line(point=True).encode(
-                    x=f"{xcol}:T", y="sales:Q", tooltip=[f"{xcol}:T","sales:Q","profit:Q"] if "profit" in ts else [f"{xcol}:T","sales:Q"]
+                    x=f"{xcol}:T", y="sales:Q",
+                    tooltip=[f"{xcol}:T","sales:Q","profit:Q"] if "profit" in ts else [f"{xcol}:T","sales:Q"]
                 ).properties(height=300),
                 use_container_width=True
             )
             st.download_button("Download (CSV)", ts.to_csv(index=False), "monthly_sales.csv", "text/csv")
 
+    # MoM Revenue (%)
     if hasattr(Q, "MOM_REVENUE"):
-        mom = run_sql(make_filtered_query(Q.MOM_REVENUE, WHERE), params)
-        if not mom.empty and "month" in mom.columns and "mom_pct" in mom.columns:
-            mom["ym"] = pd.to_datetime(mom["month"] + "-01", errors="coerce")
-            st.subheader("Month-over-Month % (Revenue)")
-            st.altair_chart(
-                alt.Chart(mom).mark_line(point=True).encode(x="ym:T", y="mom_pct:Q", tooltip=["month","sales","mom_pct"]).properties(height=260),
-                use_container_width=True
-            )
+        try:
+            mom = run_sql(make_filtered_query(Q.MOM_REVENUE, WHERE), params)
+            if not mom.empty and "month" in mom.columns and "mom_pct" in mom.columns:
+                mom["ym"] = pd.to_datetime(mom["month"] + "-01", errors="coerce")
+                st.subheader("Month-over-Month % (Revenue)")
+                st.altair_chart(
+                    alt.Chart(mom).mark_line(point=True).encode(
+                        x="ym:T", y="mom_pct:Q", tooltip=["month","sales","mom_pct"]
+                    ).properties(height=260),
+                    use_container_width=True
+                )
+        except Exception:
+            st.info("MoM chart unavailable right now (query error handled).")
 
 with tab2:
     colsA = st.columns(2)
@@ -201,7 +228,8 @@ with tab2:
             with colsA[0]:
                 st.subheader("Segment Performance")
                 st.plotly_chart(
-                    px.bar(seg, x="segment", y="sales", hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in seg]),
+                    px.bar(seg, x="segment", y="sales",
+                           hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in seg]),
                     use_container_width=True
                 )
                 st.dataframe(seg, use_container_width=True)
@@ -212,7 +240,8 @@ with tab2:
             with colsA[1]:
                 st.subheader("Category Performance")
                 st.plotly_chart(
-                    px.bar(cat, x="category", y="sales", hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in cat]),
+                    px.bar(cat, x="category", y="sales",
+                           hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in cat]),
                     use_container_width=True
                 )
                 st.dataframe(cat, use_container_width=True)
@@ -226,7 +255,8 @@ with tab3:
             with colsB[0]:
                 st.subheader("Region Performance")
                 st.plotly_chart(
-                    px.bar(reg, x="region", y="sales", hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in reg]),
+                    px.bar(reg, x="region", y="sales",
+                           hover_data=[c for c in ["profit","margin_pct","pct_sales","pct_profit","avg_discount"] if c in reg]),
                     use_container_width=True
                 )
                 st.dataframe(reg, use_container_width=True)
@@ -240,7 +270,8 @@ with tab3:
                 fig, ax = plt.subplots(figsize=(8,4))
                 ax.bar(top_states["state"], top_states["sales"])
                 ax.set_xlabel("State"); ax.set_ylabel("Sales")
-                ax.set_xticks(range(len(top_states))); ax.set_xticklabels(top_states["state"], rotation=45, ha="right")
+                ax.set_xticks(range(len(top_states)))
+                ax.set_xticklabels(top_states["state"], rotation=45, ha="right")
                 st.pyplot(fig)
                 st.dataframe(top_states, use_container_width=True)
 
@@ -258,8 +289,12 @@ with tab4:
         if not tpr.empty and "product_name" in tpr.columns:
             with colsC[0]:
                 st.subheader("Top Products by Revenue")
-                st.plotly_chart(px.bar(tpr, x="product_name", y="sales", hover_data=[c for c in ["profit","margin_pct","avg_discount","order_lines"] if c in tpr]).update_layout(xaxis_tickangle=-45),
-                                use_container_width=True)
+                st.plotly_chart(
+                    px.bar(tpr, x="product_name", y="sales",
+                           hover_data=[c for c in ["profit","margin_pct","avg_discount","order_lines"] if c in tpr])
+                    .update_layout(xaxis_tickangle=-45),
+                    use_container_width=True
+                )
                 st.dataframe(tpr, use_container_width=True)
 
     if hasattr(Q, "TOP_PRODUCTS_BY_QTY"):
@@ -267,8 +302,12 @@ with tab4:
         if not tpq.empty and "product_name" in tpq.columns:
             with colsC[1]:
                 st.subheader("Top Products by Quantity")
-                st.plotly_chart(px.bar(tpq, x="product_name", y="qty", hover_data=[c for c in ["sales","profit","margin_pct","avg_discount"] if c in tpq]).update_layout(xaxis_tickangle=-45),
-                                use_container_width=True)
+                st.plotly_chart(
+                    px.bar(tpq, x="product_name", y="qty",
+                           hover_data=[c for c in ["sales","profit","margin_pct","avg_discount"] if c in tpq])
+                    .update_layout(xaxis_tickangle=-45),
+                    use_container_width=True
+                )
                 st.dataframe(tpq, use_container_width=True)
 
     if hasattr(Q, "HIGH_SALES_LOW_PROFIT"):
@@ -285,8 +324,11 @@ with tab5:
         if not ship.empty and "avg_ship_days" in ship.columns:
             with colsD[0]:
                 st.subheader("Avg Ship Days by Region")
-                st.plotly_chart(px.bar(ship, x="region", y="avg_ship_days", hover_data=[c for c in ["orders","sales","profit","margin_pct"] if c in ship]),
-                                use_container_width=True)
+                st.plotly_chart(
+                    px.bar(ship, x="region", y="avg_ship_days",
+                           hover_data=[c for c in ["orders","sales","profit","margin_pct"] if c in ship]),
+                    use_container_width=True
+                )
                 st.dataframe(ship, use_container_width=True)
 
     if hasattr(Q, "MONTHLY_AVG_DISCOUNT"):
@@ -295,18 +337,21 @@ with tab5:
             with colsD[1]:
                 mad["ym"] = pd.to_datetime(mad["month"] + "-01", errors="coerce")
                 st.subheader("Monthly Avg. Discount")
-                st.altair_chart(alt.Chart(mad).mark_line(point=True).encode(x="ym:T", y="avg_discount:Q", tooltip=["month","avg_discount"]).properties(height=260),
-                                use_container_width=True)
+                st.altair_chart(
+                    alt.Chart(mad).mark_line(point=True).encode(
+                        x="ym:T", y="avg_discount:Q", tooltip=["month","avg_discount"]
+                    ).properties(height=260),
+                    use_container_width=True
+                )
                 st.dataframe(mad, use_container_width=True)
 
-    # Scatter: discount vs profit (simple raw select, still filterable)
     dvp = run_sql(make_filtered_query("SELECT discount, profit FROM sales", WHERE), params)
     if not dvp.empty and {"discount","profit"}.issubset(dvp.columns):
         st.subheader("Discount vs Profit")
         scatter = alt.Chart(dvp).mark_circle(opacity=0.5).encode(x="discount:Q", y="profit:Q").interactive().properties(height=300)
         st.altair_chart(scatter, use_container_width=True)
 
-# ───────────────────────────── Sidebar: SQL Runner (for debug) ────────────────────────
+# ───────────────────────────── Sidebar: SQL Runner ─────────────────────────────
 with st.sidebar.expander("Run a saved SQL"):
     saved = {
         "Schema (PRAGMA)": getattr(Q, "PRAGMA_SCHEMA", "PRAGMA table_info(sales);"),
@@ -328,4 +373,4 @@ with st.sidebar.expander("Run a saved SQL"):
         st.dataframe(out, use_container_width=True)
         st.download_button("Download result (CSV)", out.to_csv(index=False), "query_result.csv", "text/csv")
 
-st.caption("All visuals powered by saved SQL in app/sql_queries.py. Filters are applied via a CTE.")
+st.caption("All visuals powered by saved SQL in app/sql_queries.py. Filters are applied via a CTE (WITH-safe).")
