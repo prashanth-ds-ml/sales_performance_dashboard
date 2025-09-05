@@ -1,167 +1,199 @@
-# Sales_performance_dashboard
+---
 
-Here we work on superstore sales data with SQL and make an insightful dashboard with Streamlit
+# Superstore Sales Performance Dashboard (SQL + Streamlit + SQLite)
 
-Dataset_link : https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
+Interactive sales analytics on the classic **Superstore** dataset.
+Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/Matplotlib.
 
+Dataset: [https://www.kaggle.com/datasets/vivek468/superstore-dataset-final](https://www.kaggle.com/datasets/vivek468/superstore-dataset-final)
 
-## 📁 Project Structure
+---
+
+##  What’s inside
+
+* **SQLite-first pipeline** — build `superstore.db` from the cleaned CSV.
+* **Saved SQL library** (`app/sql_queries.py`) — one place for all analysis queries.
+* **Filter-aware dashboard** — sidebar filters (date, segment, region, category) are injected into saved queries via a **CTE wrapper** (no query duplication).
+* **Zero-secrets deploy** — works on Streamlit Cloud without env vars.
+
+---
+
+##  Project Structure
 
 ```
 sales_performance_dashboard/
 │
-├── data/
-│   ├── Sample - Superstore.csv         # Raw dataset
-│   ├── superstore_clean.csv            # Cleaned dataset ready for SQL
-│   └── superstore.db                   # (Optional) SQLite database
+├── app/
+│   ├── dashboard.py          # Streamlit app (uses saved queries only)
+│   └── sql_queries.py        # All SQL used by the app (SQLite syntax)
 │
-├── notebooks/
-│   └── data.ipynb                      # Data cleaning and preparation notebook
+├── scripts/
+│   └── create_sqlite_db.py   # One-off script: CSV → SQLite database
+│
+├── data/
+│   ├── Sample - Superstore.csv   # Raw dataset (optional)
+│   ├── superstore_clean.csv      # Cleaned dataset (used to build DB)
+│   └── superstore.db             # SQLite DB (recommended to commit)
 │
 ├── queries/
-│   └── sql_eda.sql                     # SQL EDA and profiling queries
+│   └── sql_eda.sql           # Original EDA/profiling (MySQL-style; kept for reference)
 │
-├── app/
-│   └── dashboard.py                    # Streamlit dashboard (to be developed)
+├── .streamlit/
+│   └── config.toml           # (optional) theme/server config
 │
+├── requirements.txt
+├── runtime.txt               # (optional) pin Python for Cloud
 └── README.md
 ```
 
+---
 
-## 📊 Data Preparation & Cleaning (`data.ipynb`)
+##  Quickstart
 
-This project uses a Jupyter notebook (`data.ipynb`) to prepare the Superstore dataset for SQL analysis and dashboarding.  
-**Key steps performed:**
+### 1) Create a virtual env & install deps
 
-1. **Dataset Download & Extraction**
-   - Downloaded the Superstore dataset from kaggle using `kagglehub`.
-   - Copied the dataset into the `/data` directory.
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
-2. **Data Loading**
-   - Loaded the raw CSV (`Sample - Superstore.csv`) into a pandas DataFrame.
-   - Handled encoding issues using `latin1`.
+### 2) Build the SQLite DB (from cleaned CSV)
 
-3. **Data Cleaning**
-   - Stripped whitespace from column names, replaced spaces/dashes with underscores, and converted to lowercase.
-   - Removed duplicate rows.
-   - Filled missing (NaN) values with empty strings.
-   - Stripped leading/trailing whitespace from all string columns.
-   - Converted numeric columns to appropriate types.
-   - Converted date columns (`order_date`, `ship_date`) to `YYYY-MM-DD` format for SQL compatibility.
+```bash
+python scripts/create_sqlite_db.py
+# creates data/superstore.db
+```
 
-4. **Export Cleaned Data**
-   - Saved the cleaned DataFrame as `superstore_clean.csv` in the `/data` directory.
+> The script normalizes column names, coerces types, and builds helpful indexes.
 
-5. **Database Loading**
-   - Connected to a local MySQL database using `mysql.connector`.
-   - Created a `sales` table with appropriate column types.
-   - Inserted data in batches for efficiency and reliability.
+### 3) Run the dashboard locally
 
-## 🧮 SQL EDA & Profiling (`queries/sql_eda.sql`)
+```bash
+streamlit run app/dashboard.py
+```
 
-The [`queries/sql_eda.sql`](queries/sql_eda.sql) file contains a comprehensive set of SQL queries for initial data exploration, validation, and profiling.  
-These queries help ensure the data is loaded correctly, is clean, and is ready for deeper analysis and dashboarding.
-
-**Key EDA steps and queries include:**
-
-| Area                        | Example Queries & Insights                                                                                   |
-|-----------------------------|-------------------------------------------------------------------------------------------------------------|
-| **Database & Table Inspection** | - Use the correct database<br>- Describe the `Sales` table schema<br>- View first 10 records<br>- Count total rows |
-| **Time Span & Completeness**    | - Find earliest and latest order dates<br>- Count total records for sanity check                           |
-| **Null & Data Quality Checks**  | - Count NULLs in every column<br>- Validate column names and data types using `INFORMATION_SCHEMA`         |
-| **Categorical Profiling**       | - List all categorical columns (e.g., `Segment`, `Region`, `Product Name`)<br>- Count distinct values in each categorical column |
-| **Numerical Profiling**         | - List all numerical columns<br>- Calculate min, max, avg, stddev for sales, quantity, discount, profit    |
-| **Segment & Category Analysis** | - Orders, sales, % contribution by `Segment` and `Category`                                               |
-| **Region & State Analysis**     | - Orders, sales, profit, margin, avg discount by `Region` and `State`<br>- Top 5 states by revenue<br>- Loss-making states |
-| **Shipping Mode Analysis**      | - Orders, sales, profit, margin, avg discount by `Ship Mode`                                              |
-
-**Sample queries covered:**
-- Table schema and row count
-- Date range of sales data
-- Null counts per column
-- Distinct value counts for categorical columns
-- Numeric column summaries (min, max, avg, stddev)
-- Segment, category, region, state, and ship mode performance breakdowns
-- Top and bottom performers (e.g., top 5 states by revenue, loss-making states)
-
-> These queries are designed to be run sequentially for a full data health check and to generate summary tables for your dashboard.
-
-
-## 🔍 SQL Analysis Plan
-
-This section outlines all the key business questions and analytical tasks we aim to answer using SQL on the Superstore Sales dataset. Each task is categorized for better clarity and mapped to SQL techniques used.
+Open the URL printed in the terminal.
 
 ---
 
-### 🗂️ A. Database Setup
+##  Deploy to Streamlit Cloud (public)
 
-- **A1.** Create normalized tables from raw CSV
-- **A2.** Insert and clean data into SQLite
-- **A3.** Define relationships using foreign keys
-- **A4.** Perform initial data validation (nulls, duplicates, types)
+1. Push this repo (including `data/superstore.db` **or** `data/superstore_clean.csv`).
+2. In Streamlit Cloud: **New app** → select repo/branch → main file: `app/dashboard.py`.
+3. Deploy.
 
----
+   * If `superstore.db` is present → instant startup.
+   * If only `superstore_clean.csv` is present → the app auto-builds the DB on first run.
 
-### 📅 B. Time-Based Sales Analysis
+**Recommended pinned versions** (already in `requirements.txt`):
 
-- **B1.** What is the monthly total sales and monthly total profit?
-- **B2.** What is the month-over-month (MoM) growth in revenue?
-- **B3.** What is the monthly average discount?
-- **B4.** Which month had the highest profit?
+```
+streamlit==1.37.1
+pandas==2.2.2
+numpy==1.26.4
+altair==5.3.0
+plotly==5.23.0
+matplotlib==3.8.4
+```
 
----
+**Optional**:
 
-### 🛍️ C. Product-Level Insights
+* `runtime.txt` → `python-3.11.9`
+* `.streamlit/config.toml` for theme:
 
-- **C1.** What are the top 10 products by total revenue?
-- **C2.** What are the top 10 products by quantity sold?
-- **C3.** Which products have high sales but negative or low profit?
-- **C4.** What’s the average discount per product category?
+  ```toml
+  [server]
+  headless = true
+  runOnSave = true
 
----
-
-### 👥 D. Customer & Segment Analysis
-
-- **D1.** What is the total revenue and profit per customer segment?
-- **D2.** Who are the top 10 customers by lifetime revenue?
-- **D3.** Which segment receives the highest average discount?
-- **D4.** Which customers contributed to negative profit?
-
----
-
-### 🌍 E. Geographic Analysis
-
-- **E1.** What is the total sales by region?
-- **E2.** What is the profit margin by region?
-- **E3.** What are the top 5 states by revenue?
-- **E4.** Which states generated losses (negative profit)?
-- **E5.** What is the average shipping time per region?
+  [theme]
+  base = "dark"
+  ```
 
 ---
 
-### 🚚 F. Shipping & Operational Metrics
+##  How the dashboard works
 
-- **F1.** What is the average shipping delay per shipping mode?
-- **F2.** What is the revenue and profit by shipping mode?
-- **F3.** Which shipping mode is used most frequently?
-- **F4.** Are faster shipping modes more profitable?
+* All charts/tables are driven by **saved SQL** in `app/sql_queries.py` (e.g., `MONTHLY_SALES_PROFIT`, `SEGMENT_RPM`, `REGION_PERF`, …).
+* Sidebar filters build a `WHERE` clause and the app injects it with a **safe CTE wrapper**:
 
----
-
-### 🧮 G. Discount & Profitability Insights
-
-- **G1.** Is there a pattern between discount and profit across products?
-- **G2.** Which categories give high discounts but low profit?
-- **G3.** What is the profit margin per category?
-
----
-
-### 🧠 H. Advanced (Optional)
-
-- **H1.** Rank all customers by lifetime spend using window functions
-- **H2.** Analyze monthly sales trend per product category
-- **H3.** Identify returning vs new customers using cohort logic
+  ```sql
+  WITH filtered_sales AS (
+    SELECT * FROM sales
+    WHERE date(order_date) BETWEEN :s AND :e
+      AND segment IN (...)
+      AND region  IN (...)
+      AND category IN (...)
+  )
+  -- Your saved query runs with 'FROM sales' rewritten to 'FROM filtered_sales'
+  ```
+* This keeps queries reusable and filter-aware without editing each SQL.
 
 ---
 
-👉 Each SQL query will be documented in the `/queries` folder and linked to the dashboard section it supports.
+##  What you’ll see in the app
+
+* **KPIs**: Total Sales, Profit, Orders, Avg Discount
+* **Time Series**: Monthly Sales & Profit, optional MoM %
+* **Segments & Categories**: performance bars + tables
+* **Geography**: Region performance, Top States, Loss-making states
+* **Products**: Top by revenue/quantity, High sales but ≤0 profit
+* **Shipping & Discounts**: Avg ship days by region, monthly avg discount, discount↔profit scatter
+
+Each table comes with a **Download CSV** button.
+
+---
+
+##  Data prep (source of truth)
+
+* Clean the raw CSV in `notebooks/data.ipynb` (or your preferred process).
+  Typical steps:
+
+  * normalize headers → snake\_case
+  * trim strings, fix types
+  * parse `order_date`, `ship_date` to `YYYY-MM-DD`
+  * export **`data/superstore_clean.csv`**
+* Build the DB with `scripts/create_sqlite_db.py`.
+
+> We keep `queries/sql_eda.sql` (MySQL-style) for reference, but the app uses the **SQLite** equivalents in `app/sql_queries.py`.
+
+---
+
+##  Troubleshooting
+
+* **“DB not found”**
+  Ensure either `data/superstore.db` (recommended) or `data/superstore_clean.csv` (auto-build) is present.
+* **Path issues on Cloud**
+  Paths in `dashboard.py` are relative to the file: `../data/superstore.db`.
+* **Window functions**
+  The MoM query uses `LAG()`. Streamlit Cloud’s SQLite supports it; if your env doesn’t, replace with a self-join version (ask in Issues).
+* **Module conflicts**
+  Don’t keep another `app/app.py` that imports MySQL secrets. Keep the Streamlit app at `app/dashboard.py` and SQL at `app/sql_queries.py`.
+
+---
+
+##  Extending the app
+
+* Add/modify queries in `app/sql_queries.py` and reference them in `dashboard.py`.
+* Create new tabs/sections with your queries (the filter wrapper will apply automatically).
+* For heavy workloads, consider **pre-aggregated** tables or switching to **DuckDB**.
+
+---
+
+##  Contributing
+
+PRs welcome! Please:
+
+1. Keep SQL in `app/sql_queries.py` (SQLite syntax).
+2. Add visuals in `app/dashboard.py` using the CTE wrapper.
+3. Pin any new Python deps in `requirements.txt`.
+
+---
+
+## 📜 License
+
+MIT (or your preferred license).
+
+---
+
