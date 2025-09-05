@@ -18,6 +18,7 @@ Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/
 
 ## 📁 Project Structure
 
+````
 sales\_performance\_dashboard/
 │
 ├── app/
