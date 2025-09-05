@@ -1,7 +1,3 @@
-
----
-
-```markdown
 # Superstore Sales Performance Dashboard (SQL + Streamlit + SQLite)
 
 Interactive sales analytics on the classic **Superstore** dataset.  
@@ -21,8 +17,6 @@ Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/
 ---
 
 ## 📁 Project Structure
-
-```
 
 sales\_performance\_dashboard/
 │
