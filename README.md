@@ -1,42 +1,45 @@
+
 ---
 
+```markdown
 # Superstore Sales Performance Dashboard (SQL + Streamlit + SQLite)
 
-Interactive sales analytics on the classic **Superstore** dataset.
+Interactive sales analytics on the classic **Superstore** dataset.  
 Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/Matplotlib.
 
-Dataset: [https://www.kaggle.com/datasets/vivek468/superstore-dataset-final](https://www.kaggle.com/datasets/vivek468/superstore-dataset-final)
+- **Dataset**: https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
 
 ---
 
-##  What’s inside
+## ✨ What’s inside
 
-* **SQLite-first pipeline** — build `superstore.db` from the cleaned CSV.
-* **Saved SQL library** (`app/sql_queries.py`) — one place for all analysis queries.
-* **Filter-aware dashboard** — sidebar filters (date, segment, region, category) are injected into saved queries via a **CTE wrapper** (no query duplication).
-* **Zero-secrets deploy** — works on Streamlit Cloud without env vars.
+- **SQLite-first pipeline** — build `superstore.db` from the cleaned CSV.
+- **Saved SQL library** (`app/sql_queries.py`) — one place for all analysis queries.
+- **Filter-aware dashboard** — sidebar filters (date, segment, region, category) are injected into saved queries via a **CTE wrapper** (no query duplication).
+- **Zero-secrets deploy** — works on Streamlit Cloud without env vars.
 
 ---
 
-##  Project Structure
+## 📁 Project Structure
 
 ```
-sales_performance_dashboard/
+
+sales\_performance\_dashboard/
 │
 ├── app/
 │   ├── dashboard.py          # Streamlit app (uses saved queries only)
-│   └── sql_queries.py        # All SQL used by the app (SQLite syntax)
+│   └── sql\_queries.py        # All SQL used by the app (SQLite syntax)
 │
 ├── scripts/
-│   └── create_sqlite_db.py   # One-off script: CSV → SQLite database
+│   └── create\_sqlite\_db.py   # One-off script: CSV → SQLite database
 │
 ├── data/
 │   ├── Sample - Superstore.csv   # Raw dataset (optional)
-│   ├── superstore_clean.csv      # Cleaned dataset (used to build DB)
+│   ├── superstore\_clean.csv      # Cleaned dataset (used to build DB)
 │   └── superstore.db             # SQLite DB (recommended to commit)
 │
 ├── queries/
-│   └── sql_eda.sql           # Original EDA/profiling (MySQL-style; kept for reference)
+│   └── sql\_eda.sql           # Original EDA/profiling (MySQL-style; kept for reference)
 │
 ├── .streamlit/
 │   └── config.toml           # (optional) theme/server config
@@ -44,19 +47,19 @@ sales_performance_dashboard/
 ├── requirements.txt
 ├── runtime.txt               # (optional) pin Python for Cloud
 └── README.md
-```
+
+````
 
 ---
 
-##  Quickstart
+## 🚀 Quickstart
 
 ### 1) Create a virtual env & install deps
-
 ```bash
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
+````
 
 ### 2) Build the SQLite DB (from cleaned CSV)
 
@@ -77,7 +80,7 @@ Open the URL printed in the terminal.
 
 ---
 
-##  Deploy to Streamlit Cloud (public)
+## ☁️ Deploy to Streamlit Cloud (public)
 
 1. Push this repo (including `data/superstore.db` **or** `data/superstore_clean.csv`).
 2. In Streamlit Cloud: **New app** → select repo/branch → main file: `app/dashboard.py`.
@@ -113,7 +116,7 @@ matplotlib==3.8.4
 
 ---
 
-##  How the dashboard works
+## 🧱 How the dashboard works
 
 * All charts/tables are driven by **saved SQL** in `app/sql_queries.py` (e.g., `MONTHLY_SALES_PROFIT`, `SEGMENT_RPM`, `REGION_PERF`, …).
 * Sidebar filters build a `WHERE` clause and the app injects it with a **safe CTE wrapper**:
@@ -132,7 +135,7 @@ matplotlib==3.8.4
 
 ---
 
-##  What you’ll see in the app
+## 📊 What you’ll see in the app
 
 * **KPIs**: Total Sales, Profit, Orders, Avg Discount
 * **Time Series**: Monthly Sales & Profit, optional MoM %
@@ -145,7 +148,7 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-##  Data prep (source of truth)
+## 🧪 Data prep (source of truth)
 
 * Clean the raw CSV in `notebooks/data.ipynb` (or your preferred process).
   Typical steps:
@@ -160,20 +163,20 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-##  Troubleshooting
+## 🛠 Troubleshooting
 
 * **“DB not found”**
   Ensure either `data/superstore.db` (recommended) or `data/superstore_clean.csv` (auto-build) is present.
 * **Path issues on Cloud**
   Paths in `dashboard.py` are relative to the file: `../data/superstore.db`.
 * **Window functions**
-  The MoM query uses `LAG()`. Streamlit Cloud’s SQLite supports it; if your env doesn’t, replace with a self-join version (ask in Issues).
+  The MoM query uses `LAG()`. Streamlit Cloud’s SQLite supports it; if your env doesn’t, replace with a self-join version.
 * **Module conflicts**
   Don’t keep another `app/app.py` that imports MySQL secrets. Keep the Streamlit app at `app/dashboard.py` and SQL at `app/sql_queries.py`.
 
 ---
 
-##  Extending the app
+## 🧩 Extending the app
 
 * Add/modify queries in `app/sql_queries.py` and reference them in `dashboard.py`.
 * Create new tabs/sections with your queries (the filter wrapper will apply automatically).
@@ -181,19 +184,13 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-##  Contributing
+## 🤝 Contributing
 
 PRs welcome! Please:
 
 1. Keep SQL in `app/sql_queries.py` (SQLite syntax).
 2. Add visuals in `app/dashboard.py` using the CTE wrapper.
 3. Pin any new Python deps in `requirements.txt`.
-
----
-
-## 📜 License
-
-MIT (or your preferred license).
 
 ---
 
