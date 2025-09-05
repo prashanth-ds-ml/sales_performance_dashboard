@@ -7,7 +7,7 @@ Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/
 
 ---
 
-## ✨ What’s inside
+##  What’s inside
 
 - **SQLite-first pipeline** — build `superstore.db` from the cleaned CSV.
 - **Saved SQL library** (`app/sql_queries.py`) — one place for all analysis queries.
@@ -16,7 +16,7 @@ Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ````
 sales\_performance\_dashboard/
@@ -47,16 +47,9 @@ sales\_performance\_dashboard/
 
 ---
 
-## 🚀 Quickstart
+##  Quickstart
 
-### 1) Create a virtual env & install deps
-```bash
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-````
-
-### 2) Build the SQLite DB (from cleaned CSV)
+### 1) Build the SQLite DB (from cleaned CSV)
 
 ```bash
 python scripts/create_sqlite_db.py
@@ -65,7 +58,7 @@ python scripts/create_sqlite_db.py
 
 > The script normalizes column names, coerces types, and builds helpful indexes.
 
-### 3) Run the dashboard locally
+### 2) Run the dashboard locally
 
 ```bash
 streamlit run app/dashboard.py
@@ -75,7 +68,7 @@ Open the URL printed in the terminal.
 
 ---
 
-## ☁️ Deploy to Streamlit Cloud (public)
+##  Deploy to Streamlit Cloud (public)
 
 1. Push this repo (including `data/superstore.db` **or** `data/superstore_clean.csv`).
 2. In Streamlit Cloud: **New app** → select repo/branch → main file: `app/dashboard.py`.
@@ -87,12 +80,12 @@ Open the URL printed in the terminal.
 **Recommended pinned versions** (already in `requirements.txt`):
 
 ```
-streamlit==1.37.1
-pandas==2.2.2
-numpy==1.26.4
-altair==5.3.0
-plotly==5.23.0
-matplotlib==3.8.4
+streamlit
+pandas
+numpy
+altair
+plotly
+matplotlib
 ```
 
 **Optional**:
@@ -111,7 +104,7 @@ matplotlib==3.8.4
 
 ---
 
-## 🧱 How the dashboard works
+##  How the dashboard works
 
 * All charts/tables are driven by **saved SQL** in `app/sql_queries.py` (e.g., `MONTHLY_SALES_PROFIT`, `SEGMENT_RPM`, `REGION_PERF`, …).
 * Sidebar filters build a `WHERE` clause and the app injects it with a **safe CTE wrapper**:
@@ -130,7 +123,7 @@ matplotlib==3.8.4
 
 ---
 
-## 📊 What you’ll see in the app
+##  What you’ll see in the app
 
 * **KPIs**: Total Sales, Profit, Orders, Avg Discount
 * **Time Series**: Monthly Sales & Profit, optional MoM %
@@ -143,7 +136,7 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-## 🧪 Data prep (source of truth)
+##  Data prep (source of truth)
 
 * Clean the raw CSV in `notebooks/data.ipynb` (or your preferred process).
   Typical steps:
@@ -158,7 +151,7 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-## 🛠 Troubleshooting
+##  Troubleshooting
 
 * **“DB not found”**
   Ensure either `data/superstore.db` (recommended) or `data/superstore_clean.csv` (auto-build) is present.
@@ -171,7 +164,7 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-## 🧩 Extending the app
+##  Extending the app
 
 * Add/modify queries in `app/sql_queries.py` and reference them in `dashboard.py`.
 * Create new tabs/sections with your queries (the filter wrapper will apply automatically).
@@ -179,7 +172,7 @@ Each table comes with a **Download CSV** button.
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 PRs welcome! Please:
 
