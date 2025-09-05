@@ -22,7 +22,7 @@ DB_PATH  = os.path.join(DATA_DIR, "superstore.db")
 CSV_PATH = os.path.join(DATA_DIR, "superstore_clean.csv")
 
 # import your saved queries
-from app import sql_queries as Q  # make sure this file exists
+import sql_queries as Q  # make sure this file exists
 
 # ───────────────────────── Helper: build DB ───────────────────────
 def _ensure_db():
