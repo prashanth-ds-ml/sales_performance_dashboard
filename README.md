@@ -4,6 +4,7 @@ Interactive sales analytics on the classic **Superstore** dataset.
 Backend is **pure SQL on SQLite**, frontend is **Streamlit** with Altair/Plotly/Matplotlib.
 
 - **Dataset**: https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
+- **Dashboard**: https://salesperformancedashboard.streamlit.app/
 
 ---
 
