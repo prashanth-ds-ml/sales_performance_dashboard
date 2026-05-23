@@ -1,10 +1,5 @@
 streamlit
 pandas
-numpy
-matplotlib
-scikit-learn
-seaborn
-mysql-connector-python
-SQLAlchemy
 altair
 plotly
+matplotlib
