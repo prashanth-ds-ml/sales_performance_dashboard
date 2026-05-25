@@ -121,6 +121,20 @@ FROM filtered_sales;
 
 This keeps query logic readable, testable, and easy to extend.
 
+## Documentation
+
+- [Business problem](docs/business_problem.md)
+- [Data dictionary](docs/data_dictionary.md)
+- [Metric definitions](docs/metric_definitions.md)
+- [Data quality report](docs/data_quality_report.md)
+- [EDA summary](docs/eda_summary.md)
+- [Case study](docs/case_study.md)
+- [Insights](docs/insights.md)
+- [Recommendations](docs/recommendations.md)
+- [Weekly review example](outputs/weekly_review/week_01_summary.md)
+- [Portfolio deep-dive SQL](queries/portfolio_deep_dive.sql)
+
 ## Resume Version
 
 See [RESUME.md](RESUME.md) for resume bullets, interview talking points, and a concise project summary.
+
